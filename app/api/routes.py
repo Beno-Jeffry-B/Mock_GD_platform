@@ -42,3 +42,38 @@ def end(session_id: str):
     evaluation = evaluate_user(session.topic, session.history)
 
     return {"evaluation": evaluation}
+
+
+from app.services.turn_manager import (
+    handle_user_turn,
+    raise_hand,
+    check_and_progress
+)
+
+@router.post("/raise-hand")
+def raise_user_hand(session_id: str):
+
+    session = get_session(session_id)
+
+    raise_hand(session)
+
+    return {"status": "Hand raised"}
+
+
+@router.post("/progress")
+def progress(session_id: str):
+
+    session = get_session(session_id)
+
+    speaker, message = check_and_progress(session)
+
+    if message == "TIME_OVER":
+        return {"status": "time_over"}
+
+    if speaker:
+        return {
+            "speaker": speaker,
+            "message": message
+        }
+
+    return {"status": "waiting"}
