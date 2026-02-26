@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GD Simulator — Group Discussion Engine</title>
+  <meta name="description" content="Practice group discussions with an AI-powered simulator." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ERROR BANNER -->
+  <div id="error-banner" class="error-banner hidden" role="alert" aria-live="assertive">
+    <span id="error-text"></span>
+    <button id="error-close" aria-label="Dismiss error">✕</button>
+  </div>
+
+  <div class="app-shell">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">💬</span>
+          <span class="logo-text">GD<strong>Sim</strong></span>
+        </div>
+        <p class="tagline">AI-Powered Group Discussion Practice</p>
+      </div>
+
+      <!-- Session Setup -->
+      <section class="session-setup" id="session-setup">
+        <h2 class="section-title">New Session</h2>
+        <div class="field-group">
+          <label for="topic-input">Discussion Topic</label>
+          <textarea id="topic-input" placeholder="e.g. Social media is harmful to democracy" rows="3"
+            maxlength="300"></textarea>
+        </div>
+        <div class="field-group">
+          <label for="duration-input">Duration (seconds)</label>
+          <input type="number" id="duration-input" placeholder="e.g. 120" min="10" max="3600" value="120" />
+        </div>
+        <button id="start-btn" class="btn btn-primary btn-full">
+          <span>▶</span> Start Session
+        </button>
+      </section>
+
+      <!-- Session Status -->
+      <section class="session-status hidden" id="session-status">
+        <div class="status-card">
+          <div class="status-row">
+            <span class="status-label">Topic</span>
+            <span class="status-value" id="status-topic">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Time Left</span>
+            <span class="status-value timer" id="timer-display">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Turns</span>
+            <span class="status-value" id="turn-counter">0</span>
+          </div>
+        </div>
+        <button id="end-btn" class="btn btn-danger btn-full">
+          <span>⏹</span> End &amp; Evaluate
+        </button>
+      </section>
+
+      <!-- Legend -->
+      <div class="legend">
+        <h3 class="legend-title">Participants</h3>
+        <div class="legend-item"><span class="legend-dot dot-user"></span> You</div>
+        <div class="legend-item"><span class="legend-dot dot-moderator"></span> Moderator</div>
+        <div class="legend-item"><span class="legend-dot dot-ai"></span> AI Participants</div>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN PANEL ===== -->
+    <main class="main-panel">
+
+      <header class="chat-header">
+        <h1 class="chat-title">Discussion Transcript</h1>
+        <div class="session-badge hidden" id="session-badge">
+          <span class="badge-dot"></span>
+          <span>Session Active</span>
+        </div>
+      </header>
+
+      <!-- Transcript -->
+      <div class="transcript" id="transcript" role="log" aria-live="polite">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">🎙️</div>
+          <p class="empty-title">No discussion yet</p>
+          <p class="empty-sub">Start a session from the sidebar to begin.</p>
+        </div>
+      </div>
+
+      <!-- Loading indicator -->
+      <div class="loading-bar hidden" id="loading-bar">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+        <span class="loading-text" id="loading-text">Waiting for response…</span>
+      </div>
+
+      <!-- ===== FLOOR CONTROL BAR ===== -->
+      <!--
+        Three mutually exclusive states shown here:
+        1. #floor-idle       — AI has floor, user can raise hand
+        2. #floor-queued     — hand raised while AI was speaking (queued)
+        3. #floor-granted    — user has the floor, text input visible
+      -->
+      <footer class="floor-bar">
+
+        <!-- STATE: AI speaking / idle -->
+        <div id="floor-idle" class="floor-state hidden">
+          <div class="floor-label">
+            <span class="floor-icon">🤚</span>
+            Raise your hand to request the floor
+          </div>
+          <button id="raise-hand-btn" class="btn btn-raise">
+            ✋ Raise Hand
+          </button>
+        </div>
+
+        <!-- STATE: Hand queued (raised while AI was mid-turn) -->
+        <div id="floor-queued" class="floor-state hidden">
+          <div class="waiting-pill">
+            <div class="loading-dots sm"><span></span><span></span><span></span></div>
+            <span>Hand raised — waiting for AI to finish…</span>
+          </div>
+        </div>
+
+        <!-- STATE: Floor granted — user may type -->
+        <div id="floor-granted" class="floor-state hidden">
+          <div class="granted-bar">
+            <div class="granted-badge">🎤 You have the floor</div>
+            <div class="input-row">
+              <textarea id="message-input" class="message-input" placeholder="Type your message…" rows="1"
+                maxlength="1000"></textarea>
+              <button id="send-btn" class="btn btn-send" aria-label="Send">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+            </div>
+            <p class="input-hint">Enter to send · Shift+Enter for newline</p>
+          </div>
+        </div>
+
+        <!-- STATE: Session not started -->
+        <div id="floor-inactive" class="floor-state">
+          <div class="floor-label muted">Start a session to participate</div>
+        </div>
+
+      </footer>
+    </main>
+
+    <!-- ===== EVALUATION PANEL ===== -->
+    <aside class="eval-panel hidden" id="eval-panel">
+      <div class="eval-header">
+        <h2>📊 Evaluation</h2>
+        <button id="eval-close" class="btn-icon-only" aria-label="Close">✕</button>
+      </div>
+      <div class="eval-body" id="eval-body">
+        <div class="eval-loading" id="eval-loading">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+          <p>Generating evaluation…</p>
+        </div>
+        <div class="eval-content hidden" id="eval-content"></div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
